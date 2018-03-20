@@ -1,0 +1,7 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!--最新刷新控件-->
+    <style name="Widget_GifView" parent="android:Theme.Light" tools:ignore="ResourceName">
+        <!-- All customizations that are NOT specific to a particular API-level can go here. -->
+    </style>
+
+</resources>
