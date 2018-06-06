@@ -6,16 +6,13 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
 import android.os.CountDownTimer;
-import android.os.Handler;
 import android.support.annotation.DrawableRes;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -329,6 +326,16 @@ public class TxVideoPlayerController
                 layou_4g.setVisibility(GONE);
                 break;
             case STATE_PREPARED:
+                /**
+                 * 显示进度条 再隐藏
+                 */
+                setTopBottomVisible(true);
+                getHandler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        setTopBottomVisible(false);
+                    }
+                }, 2000);
                 startUpdateProgressTimer();
                 break;
             case NiceVideoPlayer.STATE_PLAYING:
@@ -413,7 +420,6 @@ public class TxVideoPlayerController
     }
 
 
-
     /**
      * 电池状态即电量变化广播接收器
      */
@@ -456,7 +462,8 @@ public class TxVideoPlayerController
         mSeek.setSecondaryProgress(0);
 
         // mCenterStart.setVisibility(View.VISIBLE);
-        mImage.setVisibility(View.VISIBLE);
+
+        mImage.setVisibility(View.GONE);
 
         mBottom.setVisibility(View.GONE);
         mFullScreen.setImageResource(R.drawable.full_screen_icon);
@@ -619,9 +626,15 @@ public class TxVideoPlayerController
         }
     }
 
+
+    /**
+     * 记录拖动的时候是否是播放状态  拖动的时候保持暂停状态
+     */
+    private boolean isOnTrackingState = false;
+
     @Override
     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-        if (isTracking){
+        if (isTracking) {
             long position = (long) (mNiceVideoPlayer.getDuration() * seekBar.getProgress() / 100f);
             mNiceVideoPlayer.seekTo(position);
         }
@@ -629,12 +642,17 @@ public class TxVideoPlayerController
     }
 
 
-    private boolean isTracking=false;
+    private boolean isTracking = false;
 
     @Override
     public void onStartTrackingTouch(SeekBar seekBar) {
         LogUtil.i("seekBar==onStartTrackingTouch");
         isTracking = true;
+//        if (mSeek.getProgress()==0){
+//            mSeek.setProgress(0);
+//        }
+//        isOnTrackingState = mNiceVideoPlayer.isPlaying();
+//        mNiceVideoPlayer.pause();
 //        long position = (long) (mNiceVideoPlayer.getDuration() * seekBar.getProgress() / 100f);
 //        mNiceVideoPlayer.seekTo(position);
 //        mPosition.setText(NiceUtil.formatTime(position));
@@ -642,22 +660,20 @@ public class TxVideoPlayerController
 
     @Override
     public void onStopTrackingTouch(SeekBar seekBar) {
-         isTracking = false;
+        isTracking = false;
 //        if (mNiceVideoPlayer.isBufferingPaused() || mNiceVideoPlayer.isPaused()) {
 //            mNiceVideoPlayer.restart();
 //        }
         long position = (long) (mNiceVideoPlayer.getDuration() * seekBar.getProgress() / 100f);
         mNiceVideoPlayer.seekTo(position);
         startDismissTopBottomTimer();
-
-        if (mNiceVideoPlayer.isPaused()) {
-            // mNiceVideoPlayer.setmCurrentState(STATE_PREPARED);
-            // mNiceVideoPlayer.getmController().onPlayStateChanged(mNiceVideoPlayer.getmCurrentState());
-            mNiceVideoPlayer.pause();
-        } else {
+        if (!mNiceVideoPlayer.isPaused()) {
             mNiceVideoPlayer.restart();
         }
-
+//        if (isOnTrackingState) {
+//            mNiceVideoPlayer.restart();
+//            isOnTrackingState = false;
+//        }
 
 
     }
@@ -665,8 +681,8 @@ public class TxVideoPlayerController
 
     @Override
     protected void updateProgress() {
-        if (mNiceVideoPlayer.getmCurrentState()==STATE_COMPLETED){
-            Log.e("updateProgress","mNiceVideoPlayer.getmCurrentState()==STATE_COMPLETED");
+        if (mNiceVideoPlayer.getmCurrentState() == STATE_COMPLETED) {
+            Log.e("updateProgress", "mNiceVideoPlayer.getmCurrentState()==STATE_COMPLETED");
         }
         long position = mNiceVideoPlayer.getCurrentPosition();
         long duration = mNiceVideoPlayer.getDuration();
@@ -678,7 +694,7 @@ public class TxVideoPlayerController
         mSeek.setSecondaryProgress(bufferPercentage);
         int progress = (int) (100f * position / duration);
 
-        Log.e("updateProgress--",position+"/"+duration);
+        // Log.e("updateProgress--",position+"/"+duration);
 
 //        int currentInt = (int) Math.ceil(position * 1.0 / 1000);
 //        int durationInt = (int) Math.ceil((duration / 1000) * 1.0);
@@ -695,7 +711,7 @@ public class TxVideoPlayerController
         if (!mNiceVideoPlayer.isPaused()) {
             //防止跳针
             mSeek.setProgress(progress);
-        }else {
+        } else {
             //mSeek.setProgress(progress);
         }
         mPosition.setText(NiceUtil.formatTime(position));

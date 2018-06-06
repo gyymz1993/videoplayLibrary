@@ -1,34 +1,22 @@
 package com.xiao.nicevideoplayer;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
-import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.SurfaceTexture;
 import android.media.AudioManager;
-import android.media.MediaPlayer;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.Surface;
-import android.view.SurfaceHolder;
 import android.view.TextureView;
 import android.view.ViewGroup;
-import android.view.WindowManager;
 import android.widget.FrameLayout;
-import android.widget.ImageView;
-import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.HashMap;
 import java.util.Map;
 
 import tv.danmaku.ijk.media.player.AndroidMediaPlayer;
@@ -157,7 +145,7 @@ public class NiceVideoPlayer extends FrameLayout
 
     private void init() {
         mContainer = new FrameLayout(mContext);
-         mContainer.setBackgroundColor(Color.BLACK);
+        mContainer.setBackgroundColor(Color.BLACK);
         //mContainer.setBackgroundColor(getResources().getColor(R.color.video_bg));
         //  mContainer.setBackgroundColor(getResources().getColor(R.color.video_bg));
         // android:background="#1f1f27"
@@ -280,12 +268,6 @@ public class NiceVideoPlayer extends FrameLayout
             mCurrentState = STATE_IDLE;
             return;
         }
-        //  mCurrentState = STATE_IDLE;
-
-//        if (!isInitVideoManager){
-//
-//        }
-
         mCurrentState = STATE_IDLE;
         if (mCurrentState == STATE_IDLE) {
             //  NiceVideoPlayerManager.instance().setCurrentNiceVideoPlayer(this);
@@ -336,15 +318,6 @@ public class NiceVideoPlayer extends FrameLayout
     public void pause() {
 
         LogUtil.i("pause" + "mCurrentState:" + mCurrentState);
-
-//        /**
-//         * 播放准备就绪
-//         **/
-//        public static final int STATE_PREPARED = 2;
-        //跳转的时候视频还没有播放
-
-        // showPauseCover();
-
         if (mCurrentState == STATE_PREPARING || mCurrentState == STATE_PREPARED) {
             mMediaPlayer.pause();
             mCurrentState = STATE_PAUSED;
@@ -580,23 +553,9 @@ public class NiceVideoPlayer extends FrameLayout
     protected void openMediaPlayer() {
 
         try {
-
             // 屏幕常亮
             mContainer.setKeepScreenOn(true);
-
-
-//            if (mMediaPlayer != null) {
-//                mMediaPlayer.release();
-//                mMediaPlayer = null;
-//            }
-//            initIJKPlayer();
-
             Uri uri = Uri.parse(mUrl);
-            Map<String, String> headers = new HashMap<>();
-
-// Use java reflection call the hide API:
-
-
             // 设置监听
             mMediaPlayer.setOnPreparedListener(mOnPreparedListener);
             mMediaPlayer.setOnVideoSizeChangedListener(mOnVideoSizeChangedListener);
@@ -607,27 +566,25 @@ public class NiceVideoPlayer extends FrameLayout
             // 设置dataSource
             LogUtil.i("mUrl   openMediaPlayer--------------" + mUrl);
             mMediaPlayer.setDataSource(mContext, uri);
-            // Method method = mMediaPlayer.getClass().getMethod("setDataSource", new Class[] { Context.class, Uri.class });
-            //method.setAccessible(true);
-            //method.invoke(mMediaPlayer, new Object[] {this, uri});
-            //mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
             LogUtil.d("STATE_PREPARING");
-
             if (mSurface == null) {
                 mSurface = new Surface(mSurfaceTexture);
             }
-
             mMediaPlayer.setSurface(mSurface);
             mMediaPlayer.prepareAsync();
             mCurrentState = STATE_PREPARING;
             mController.onPlayStateChanged(mCurrentState);
             isInitMediaPlayer = true;
 
-        } catch (IllegalArgumentException e) {
+        } catch (FileNotFoundException e){
+
+        }catch (IOException e){
+
+        }catch (IllegalArgumentException e) {
             e.printStackTrace();
         } catch (IllegalStateException e) {
             e.printStackTrace();
-        } catch (Exception e){
+        } catch (Exception e) {
 
         }
 
@@ -684,39 +641,36 @@ public class NiceVideoPlayer extends FrameLayout
             = new IMediaPlayer.OnCompletionListener() {
         @Override
         public void onCompletion(IMediaPlayer mp) {
-//            mCurrentState = STATE_COMPLETED;
-//            mController.onPlayStateChanged(mCurrentState);
-//            LogUtil.d("onCompletion ——> STATE_COMPLETED");
-//            // 清除屏幕常亮
-//            mContainer.setKeepScreenOn(false);
-            if (mController.isLooping()) {
-                //重播i
-                mCurrentState = STATE_PREPARED;
-                mController.onPlayStateChanged(mCurrentState);
-                LogUtil.d("onPrepared ——> STATE_PREPARED");
-                mp.start();
-            } else {
-                mCurrentState = STATE_COMPLETED;
-                mController.onPlayStateChanged(mCurrentState);
-                mContainer.setKeepScreenOn(false);
-                if (videoCompleListener != null) {
-                    // 恢复控制器
-                    if (mController != null) {
-                        mController.reset();
+            /**
+             * 如果不是循环播放 则重置
+             */
+            if (!mController.isLooping()) {
+                if (mController != null) {
+                    mController.reset();
+                }
+            }
+            //重播i
+            mCurrentState = STATE_PREPARED;
+            mController.onPlayStateChanged(mCurrentState);
+            LogUtil.d("onPrepared ——> STATE_PREPARED");
+            mp.start();
+            /**
+             * 如果不是循环播放 则暂停
+             */
+            if (!mController.isLooping()) {
+                getHandler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        pause();
+                        seekTo(0);
                     }
+                }, 0);
+                if (videoCompleListener != null) {
                     videoCompleListener.onVideoComple();
                 }
             }
-
-
-            //mCurrentState = STATE_PAUSED;
-            //mController.onPlayStateChanged(mCurrentState);
-
         }
-
-
     };
-
 
     VideoCompleListener videoCompleListener;
 
@@ -908,7 +862,7 @@ public class NiceVideoPlayer extends FrameLayout
         ViewGroup contentView = (ViewGroup) NiceUtil.scanForActivity(mContext)
                 .findViewById(android.R.id.content);
         // 小窗口的宽度为屏幕宽度的60%，长宽比默认为16:9，右边距、下边距为8dp。
-        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+        LayoutParams params = new LayoutParams(
                 (int) (NiceUtil.getScreenWidth(mContext) * 0.6f),
                 (int) (NiceUtil.getScreenWidth(mContext) * 0.6f * 9f / 16f));
         params.gravity = Gravity.BOTTOM | Gravity.END;
@@ -983,10 +937,8 @@ public class NiceVideoPlayer extends FrameLayout
         }
         mCurrentMode = MODE_NORMAL;
         mContext = null;
-
         // 释放播放器
         releasePlayer();
-
         // 恢复控制器
         if (mController != null) {
             mController.reset();

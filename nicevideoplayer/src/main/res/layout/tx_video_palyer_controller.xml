@@ -9,7 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="fitXY"
-        android:visibility="visible" />
+        android:visibility="gone" />
     <!--加载动画-->
     <LinearLayout
         android:id="@+id/loading"
@@ -328,10 +328,10 @@
                 android:layout_marginTop="2dp"
                 android:layout_weight="1"
                 android:background="@null"
+                android:padding="10dp"
                 android:maxHeight="3dp"
                 android:minHeight="3dp"
                 android:thumbOffset="4dp"
-                android:focusable="true"
                 android:thumb="@drawable/video_seek_tb"
                 android:progressDrawable="@drawable/video_seek_pg"
                 />

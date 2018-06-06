@@ -10,8 +10,6 @@ import java.util.Date;
 import java.util.Formatter;
 import java.util.Locale;
 
-import static com.xiao.nicevideoplayer.NiceVideoPlayer.STATE_PREPARED;
-
 /**
  * Created by XiaoJianjun on 2017/6/21.
  * 仿腾讯视频热点列表页播放器控制器.
@@ -51,12 +49,9 @@ public class EditTxVideoPlayerController
             // long endTime = ((EditNiceVideoPlayer) mNiceVideoPlayer).getmEndTime();
             // position *= (endTime - startTime);
             position += startTime;
-
-
             int currentInt = (int) Math.ceil((position - startTime) * 1.0 / 100);
             int durationInt = (int) Math.ceil((mNiceVideoPlayer.getDuration() / 100) * 1.0);
             float progress = (float) (currentInt * 1.00 / durationInt);
-
             //超过最大显示最大
             if (currentInt > durationInt) {
                 progress = (float) 1.0;
@@ -65,12 +60,10 @@ public class EditTxVideoPlayerController
             position = startTime + (int) (progress * mNiceVideoPlayer.getDuration());
             LogUtil.i("onStartTouchEnd------" + ((EditNiceVideoPlayer) mNiceVideoPlayer).getmStartTime() + position);
         }
-
         LogUtil.i("onStartTouchEnd------" + ((EditNiceVideoPlayer) mNiceVideoPlayer).getmStartTime() + position);
         mNiceVideoPlayer.seekTo(position);
         startDismissTopBottomTimer();
         //mNiceVideoPlayer.pause();
-
 
     }
 
@@ -116,9 +109,7 @@ public class EditTxVideoPlayerController
     protected void updateProgress() {
         long position = mNiceVideoPlayer.getCurrentPosition();
         long duration = mNiceVideoPlayer.getDuration();
-
         LogUtil.i("onStartTrackingTouch------" + position + "  vv   " + duration);
-
 //        if (position != 0) {
 ////            //延迟500造成进度条不准确
 ////            position += 500;

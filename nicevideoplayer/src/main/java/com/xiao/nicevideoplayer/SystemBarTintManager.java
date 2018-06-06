@@ -15,9 +15,6 @@ package com.xiao.nicevideoplayer;
  * limitations under the License.
  */
 
-import android.content.Context;
-import android.view.Gravity;
-
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;

@@ -32,43 +32,66 @@ android {
 
     productFlavors {
     }
+    dexOptions {
+        incremental true
+    }
 }
 
 dependencies {
+
     // compile fileTree(include: ['*.jar'], dir: 'libs')
-//    androidTestCompile(rootProject.ext.dependencies.espresso, {
-//        exclude group: 'com.android.support', module: 'support-annotations'
-//    })
-//    compile rootProject.ext.dependencies.appcompatV7
-//    compile rootProject.ext.dependencies.junit
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
+
+    //    androidTestCompile(rootProject.ext.dependencies.espresso, {
+
+    //        exclude group: 'com.android.support', module: 'support-annotations'
+
+    //    })
+
+    //    compile rootProject.ext.dependencies.appcompatV7
+
+    //    compile rootProject.ext.dependencies.junit
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation 'com.android.support:appcompat-v7:26.1.0'
     testImplementation 'junit:junit:4.12'
     compile 'tv.danmaku.ijk.media:ijkplayer-java:0.8.3'
     compile 'tv.danmaku.ijk.media:ijkplayer-exo:0.8.3'
+
     // compile 'tv.danmaku.ijk.media:ijkplayer-armv7a:0.8.3'
+
     //compile 'tv.danmaku.ijk.media:ijkplayer-armv5:0.8.3'
+
     // compile 'tv.danmaku.ijk.media:ijkplayer-arm64:0.8.3'
+
     //compile 'tv.danmaku.ijk.media:ijkplayer-x86:0.8.3'
+
     //compile 'tv.danmaku.ijk.media:ijkplayer-x86_64:0.8.3'
 
-//    compile 'tv.danmaku.ijk.media:ijkplayer-java:0.7.5'
-//    compile 'tv.danmaku.ijk.media:ijkplayer-armv7a:0.7.5'
-//    compile 'tv.danmaku.ijk.media:ijkplayer-armv5:0.7.5'
-//    compile 'tv.danmaku.ijk.media:ijkplayer-arm64:0.7.5'
-//    compile 'tv.danmaku.ijk.media:ijkplayer-x86:0.7.5'
-//    compile 'tv.danmaku.ijk.media:ijkplayer-x86_64:0.7.5'
-//    compile 'tv.danmaku.ijk.media:ijkplayer-exo:0.7.5'
+    //    compile 'tv.danmaku.ijk.media:ijkplayer-java:0.7.5'
 
-//    //对应ijkplayer的 compile 'tv.danmaku.ijk.media:ijkplayer-armv7a:0.6.0'
+    //    compile 'tv.danmaku.ijk.media:ijkplayer-armv7a:0.7.5'
+
+    //    compile 'tv.danmaku.ijk.media:ijkplayer-armv5:0.7.5'
+
+    //    compile 'tv.danmaku.ijk.media:ijkplayer-arm64:0.7.5'
+
+    //    compile 'tv.danmaku.ijk.media:ijkplayer-x86:0.7.5'
+
+    //    compile 'tv.danmaku.ijk.media:ijkplayer-x86_64:0.7.5'
+
+    //    compile 'tv.danmaku.ijk.media:ijkplayer-exo:0.7.5'
+
+    //    //对应ijkplayer的 compile 'tv.danmaku.ijk.media:ijkplayer-armv7a:0.6.0'
     compile 'com.dou361.ijkplayer-armv7a:jjdxm-ijkplayer-armv7a:1.0.0'
-////对应ijkplayer的 compile 'tv.danmaku.ijk.media:ijkplayer-armv5:0.6.0'
-    compile 'com.dou361.ijkplayer-armv5:jjdxm-ijkplayer-armv5:1.0.0'
-////对应ijkplayer的 compile 'tv.danmaku.ijk.media:ijkplayer-arm64:0.6.0'
-    compile 'com.dou361.ijkplayer-arm64:jjdxm-ijkplayer-arm64:1.0.0'
-////对应ijkplayer的 compile 'tv.danmaku.ijk.media:ijkplayer-x86:0.6.0'
-    compile 'com.dou361.ijkplayer-x86:jjdxm-ijkplayer-x86:1.0.0'
-////对应ijkplayer的 compile 'tv.danmaku.ijk.media:ijkplayer-x86_64:0.6.0'
-    compile 'com.dou361.ijkplayer-x86_64:jjdxm-ijkplayer-x86_64:1.0.0'
 
+    ////对应ijkplayer的 compile 'tv.danmaku.ijk.media:ijkplayer-armv5:0.6.0'
+    compile 'com.dou361.ijkplayer-armv5:jjdxm-ijkplayer-armv5:1.0.0'
+
+    ////对应ijkplayer的 compile 'tv.danmaku.ijk.media:ijkplayer-arm64:0.6.0'
+    compile 'com.dou361.ijkplayer-arm64:jjdxm-ijkplayer-arm64:1.0.0'
+
+    ////对应ijkplayer的 compile 'tv.danmaku.ijk.media:ijkplayer-x86:0.6.0'
+    compile 'com.dou361.ijkplayer-x86:jjdxm-ijkplayer-x86:1.0.0'
+
+    ////对应ijkplayer的 compile 'tv.danmaku.ijk.media:ijkplayer-x86_64:0.6.0'
+    compile 'com.dou361.ijkplayer-x86_64:jjdxm-ijkplayer-x86_64:1.0.0'
 }

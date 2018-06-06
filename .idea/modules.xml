@@ -2,9 +2,10 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/Mylibrary.iml" filepath="$PROJECT_DIR$/Mylibrary.iml" />
+      <module fileurl="file://D:\Library\videoplayLibrary\Mylibrary.iml" filepath="D:\Library\videoplayLibrary\Mylibrary.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
       <module fileurl="file://$PROJECT_DIR$/nicevideoplayer/nicevideoplayer.iml" filepath="$PROJECT_DIR$/nicevideoplayer/nicevideoplayer.iml" />
+      <module fileurl="file://$PROJECT_DIR$/videoplayLibrary.iml" filepath="$PROJECT_DIR$/videoplayLibrary.iml" />
     </modules>
   </component>
 </project>

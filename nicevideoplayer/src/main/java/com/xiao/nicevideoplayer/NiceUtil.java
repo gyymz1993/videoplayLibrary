@@ -5,7 +5,6 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
 import android.content.ContextWrapper;
-import android.graphics.Color;
 import android.os.Build;
 import android.support.v4.view.ViewCompat;
 import android.support.v7.app.ActionBar;

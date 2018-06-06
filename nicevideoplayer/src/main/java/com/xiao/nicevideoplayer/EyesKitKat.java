@@ -13,7 +13,6 @@ import android.view.WindowManager;
 import android.widget.FrameLayout;
 
 
-
 @TargetApi(Build.VERSION_CODES.KITKAT)
 public class EyesKitKat {
     private static final String TAG_FAKE_STATUS_BAR_VIEW = "statusBarView";

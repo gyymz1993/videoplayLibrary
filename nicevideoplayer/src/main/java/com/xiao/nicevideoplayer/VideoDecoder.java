@@ -7,8 +7,6 @@ import android.media.MediaFormat;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaMuxer;
 import android.os.Build;
-import android.os.Environment;
-import android.text.format.DateUtils;
 import android.util.Log;
 
 import java.nio.ByteBuffer;
