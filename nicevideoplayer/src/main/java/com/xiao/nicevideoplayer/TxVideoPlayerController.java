@@ -4,15 +4,19 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.opengl.Visibility;
 import android.os.BatteryManager;
 import android.os.CountDownTimer;
+import android.os.Handler;
 import android.support.annotation.DrawableRes;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -42,65 +46,93 @@ public class TxVideoPlayerController
         SeekBar.OnSeekBarChangeListener,
         ChangeClarityDialog.OnClarityChangedListener {
 
+    protected TextView mTime;
+    protected TextView mPosition;
+    protected TextView mDuration;
+    protected SeekBar mSeek;
+    protected ImageView mFullScreen;
+    protected LinearLayout mChangePositon;
+    protected TextView mChangePositionCurrent;
+    protected ProgressBar mChangePositionProgress;
+    Handler mHander = new Handler();
     private Context mContext;
     private ImageView mImage;
     private ImageView mCenterStart;
-
     private LinearLayout mTop;
     private ImageView mBack;
     private TextView mTitle;
     private LinearLayout mBatteryTime;
     private ImageView mBattery;
-    protected TextView mTime;
-
     private LinearLayout mBottom;
     private ImageView mRestartPause;
-    protected TextView mPosition;
-    protected TextView mDuration;
-    protected SeekBar mSeek;
     private TextView mClarity;
-    protected ImageView mFullScreen;
-
     private TextView mLength;
-
     private LinearLayout mLoading;
     private TextView mLoadText;
-
-    protected LinearLayout mChangePositon;
-    protected TextView mChangePositionCurrent;
-    protected ProgressBar mChangePositionProgress;
-
     private LinearLayout mChangeBrightness;
     private ProgressBar mChangeBrightnessProgress;
-
     private LinearLayout mChangeVolume;
     private ProgressBar mChangeVolumeProgress;
-
     private LinearLayout mError;
     private TextView mRetry;
-
     private LinearLayout mCompleted;
     private TextView mReplay;
     private TextView mShare;
-
     /*处于4g状态*/
     private LinearLayout layou_4g;
-
     private boolean topBottomVisible;
     private CountDownTimer mDismissTopBottomCountDownTimer;
-
     private List<Clarity> clarities;
     private int defaultClarityIndex;
-
     private ChangeClarityDialog mClarityDialog;
-
     private boolean hasRegisterBatteryReceiver; // 是否已经注册了电池广播
-
+    private boolean isShowButtomView = true;
+    /**
+     * 电池状态即电量变化广播接收器
+     */
+    private BroadcastReceiver mBatterReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            int status = intent.getIntExtra(BatteryManager.EXTRA_STATUS,
+                    BatteryManager.BATTERY_STATUS_UNKNOWN);
+            if (status == BatteryManager.BATTERY_STATUS_CHARGING) {
+                // 充电中
+                mBattery.setImageResource(R.drawable.battery_charging);
+            } else if (status == BatteryManager.BATTERY_STATUS_FULL) {
+                // 充电完成
+                mBattery.setImageResource(R.drawable.battery_full);
+            } else {
+                int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
+                int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 0);
+                int percentage = (int) (((float) level / scale) * 100);
+                if (percentage <= 10) {
+                    mBattery.setImageResource(R.drawable.battery_10);
+                } else if (percentage <= 20) {
+                    mBattery.setImageResource(R.drawable.battery_20);
+                } else if (percentage <= 50) {
+                    mBattery.setImageResource(R.drawable.battery_50);
+                } else if (percentage <= 80) {
+                    mBattery.setImageResource(R.drawable.battery_80);
+                } else if (percentage <= 100) {
+                    mBattery.setImageResource(R.drawable.battery_100);
+                }
+            }
+        }
+    };
+    /**
+     * 记录拖动的时候是否是播放状态  拖动的时候保持暂停状态
+     */
+    private boolean isOnTrackingState = false;
+    private boolean isTracking = false;
 
     public TxVideoPlayerController(Context context) {
         super(context);
         mContext = context;
         init();
+    }
+
+    public void setShowButtomView(boolean showButtomView) {
+        isShowButtomView = showButtomView;
     }
 
     protected void init() {
@@ -201,7 +233,6 @@ public class TxVideoPlayerController
         mError.setVisibility(View.GONE);
     }
 
-
     public void status4G() {
         if (mNiceVideoPlayer != null) {
             mNiceVideoPlayer.pause();
@@ -209,7 +240,6 @@ public class TxVideoPlayerController
         }
         show4GPlayLayout();
     }
-
 
     public void statusWifi() {
         if (mNiceVideoPlayer != null) {
@@ -228,7 +258,6 @@ public class TxVideoPlayerController
         showVideoLayout();
     }
 
-
     public void statusNoNetWork() {
         if (mNiceVideoPlayer != null) {
             mNiceVideoPlayer.pause();
@@ -236,7 +265,6 @@ public class TxVideoPlayerController
         }
         showNetErrorLayout();
     }
-
 
     protected void showNetErrorLayout() {
         // cancelUpdateProgressTimer();
@@ -309,7 +337,7 @@ public class TxVideoPlayerController
     }
 
     @Override
-    protected void onPlayStateChanged(int playState) {
+    public void onPlayStateChanged(int playState) {
         switch (playState) {
             case STATE_IDLE:
                 break;
@@ -330,7 +358,7 @@ public class TxVideoPlayerController
                  * 显示进度条 再隐藏
                  */
                 setTopBottomVisible(true);
-                getHandler().postDelayed(new Runnable() {
+                mHander.postDelayed(new Runnable() {
                     @Override
                     public void run() {
                         setTopBottomVisible(false);
@@ -418,40 +446,6 @@ public class TxVideoPlayerController
                 break;
         }
     }
-
-
-    /**
-     * 电池状态即电量变化广播接收器
-     */
-    private BroadcastReceiver mBatterReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            int status = intent.getIntExtra(BatteryManager.EXTRA_STATUS,
-                    BatteryManager.BATTERY_STATUS_UNKNOWN);
-            if (status == BatteryManager.BATTERY_STATUS_CHARGING) {
-                // 充电中
-                mBattery.setImageResource(R.drawable.battery_charging);
-            } else if (status == BatteryManager.BATTERY_STATUS_FULL) {
-                // 充电完成
-                mBattery.setImageResource(R.drawable.battery_full);
-            } else {
-                int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
-                int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 0);
-                int percentage = (int) (((float) level / scale) * 100);
-                if (percentage <= 10) {
-                    mBattery.setImageResource(R.drawable.battery_10);
-                } else if (percentage <= 20) {
-                    mBattery.setImageResource(R.drawable.battery_20);
-                } else if (percentage <= 50) {
-                    mBattery.setImageResource(R.drawable.battery_50);
-                } else if (percentage <= 80) {
-                    mBattery.setImageResource(R.drawable.battery_80);
-                } else if (percentage <= 100) {
-                    mBattery.setImageResource(R.drawable.battery_100);
-                }
-            }
-        }
-    };
 
     @Override
     protected void reset() {
@@ -581,8 +575,14 @@ public class TxVideoPlayerController
      */
     protected void setTopBottomVisible(boolean visible) {
         mTop.setVisibility(visible ? View.VISIBLE : View.GONE);
-        mBottom.setVisibility(visible ? View.VISIBLE : View.GONE);
-        topBottomVisible = visible;
+
+        if (isShowButtomView) {
+            mBottom.setVisibility(visible ? View.VISIBLE : View.GONE);
+            topBottomVisible = visible;
+        } else {
+            mBottom.setVisibility(View.GONE);
+            topBottomVisible = true;
+        }
         if (visible) {
             if (!mNiceVideoPlayer.isPaused() && !mNiceVideoPlayer.isBufferingPaused()) {
                 startDismissTopBottomTimer();
@@ -626,12 +626,6 @@ public class TxVideoPlayerController
         }
     }
 
-
-    /**
-     * 记录拖动的时候是否是播放状态  拖动的时候保持暂停状态
-     */
-    private boolean isOnTrackingState = false;
-
     @Override
     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
         if (isTracking) {
@@ -640,9 +634,6 @@ public class TxVideoPlayerController
         }
         LogUtil.i("seekBar==onProgressChanged");
     }
-
-
-    private boolean isTracking = false;
 
     @Override
     public void onStartTrackingTouch(SeekBar seekBar) {
