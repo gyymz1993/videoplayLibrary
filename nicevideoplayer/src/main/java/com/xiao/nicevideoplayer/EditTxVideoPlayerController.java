@@ -181,7 +181,7 @@ public class EditTxVideoPlayerController
 
 
     @Override
-    protected void onPlayStateChanged(int playState) {
+    public void onPlayStateChanged(int playState) {
         super.onPlayStateChanged(playState);
         getmBottom().setVisibility(GONE);
     }

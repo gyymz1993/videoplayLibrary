@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.opengl.Visibility;
 import android.os.BatteryManager;
 import android.os.CountDownTimer;
 import android.os.Handler;
@@ -12,11 +11,9 @@ import android.support.annotation.DrawableRes;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -36,10 +33,6 @@ import static com.xiao.nicevideoplayer.NiceVideoPlayer.STATE_PAUSED;
 import static com.xiao.nicevideoplayer.NiceVideoPlayer.STATE_PREPARED;
 import static com.xiao.nicevideoplayer.NiceVideoPlayer.STATE_PREPARING;
 
-/**
- * Created by XiaoJianjun on 2017/6/21.
- * 仿腾讯视频热点列表页播放器控制器.
- */
 public class TxVideoPlayerController
         extends NiceVideoPlayerController
         implements View.OnClickListener,
