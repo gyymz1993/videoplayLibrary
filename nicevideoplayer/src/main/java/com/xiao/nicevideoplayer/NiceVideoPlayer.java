@@ -5,8 +5,8 @@ import android.content.pm.ActivityInfo;
 import android.graphics.Color;
 import android.graphics.SurfaceTexture;
 import android.media.AudioManager;
-import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.Surface;
@@ -96,42 +96,172 @@ public class NiceVideoPlayer extends FrameLayout
      * MediaPlayer
      **/
     public static final int TYPE_NATIVE = 222;
-
-
+    public NiceTextureView mTextureView;
+    public NiceVideoPlayerController mController;
+    public SurfaceTexture mSurfaceTexture;
+    public boolean isInitMediaPlayer = false;
     //是否准备完成前调用了暂停
     protected boolean mPauseBeforePrepared = false;
-
-    private int mPlayerType = TYPE_IJK;
     protected int mCurrentState = STATE_IDLE;
-    private int mCurrentMode = MODE_NORMAL;
-
     protected Context mContext;
-    private AudioManager mAudioManager;
     protected IMediaPlayer mMediaPlayer;
     protected FrameLayout mContainer;
-    public NiceTextureView mTextureView;
-    protected NiceVideoPlayerController mController;
-    protected SurfaceTexture mSurfaceTexture;
     protected Surface mSurface;
     protected String mUrl;
     protected Map<String, String> mHeaders;
+    protected boolean isInitVideoManager = false;
+    protected IMediaPlayer.OnPreparedListener mOnPreparedListener
+            = new IMediaPlayer.OnPreparedListener() {
+        @Override
+        public void onPrepared(IMediaPlayer mp) {
+            mCurrentState = STATE_PREPARED;
+            mController.onPlayStateChanged(mCurrentState);
+            LogUtil.d("onPrepared ——> STATE_PREPARED");
+            mp.start();
+
+            // 从上次的保存位置播放
+//            if (continueFromLastPosition) {
+//                long savedPlayPosition = NiceUtil.getSavedPlayPosition(mContext, mUrl);
+//                mp.seekTo(savedPlayPosition);
+//            }
+            // 跳到指定位置播放
+//            if (skipToPosition != 0) {
+//                mp.seekTo(skipToPosition);
+//            }
+        }
+    };
+    protected IMediaPlayer.OnVideoSizeChangedListener mOnVideoSizeChangedListener
+            = new IMediaPlayer.OnVideoSizeChangedListener() {
+        @Override
+        public void onVideoSizeChanged(IMediaPlayer mp, int width, int height, int sar_num, int sar_den) {
+
+            LogUtil.d("onVideoSizeChanged ——> width：" + width + "， height：" + height + "sar_num:" + sar_num + "sar_den:" + sar_den);
+            mTextureView.adaptVideoSize(width, height);
+            LogUtil.d("onVideoSizeChanged ——> width：" + width + "， height：" + height);
+        }
+    };
+    protected IMediaPlayer.OnErrorListener mOnErrorListener
+            = new IMediaPlayer.OnErrorListener() {
+        @Override
+        public boolean onError(IMediaPlayer mp, int what, int extra) {
+            // 直播流播放时去调用mediaPlayer.getDuration会导致-38和-2147483648错误，忽略该错误
+            if (what != -38 && what != -2147483648 && extra != -38 && extra != -2147483648) {
+                mMediaPlayer.pause();
+                mCurrentState = STATE_ERROR;
+                mController.onPlayStateChanged(mCurrentState);
+                LogUtil.d("onError ——> STATE_ERROR ———— what：" + what + ", extra: " + extra);
+            }
+            return true;
+        }
+    };
+    protected IMediaPlayer.OnInfoListener mOnInfoListener
+            = new IMediaPlayer.OnInfoListener() {
+        @Override
+        public boolean onInfo(IMediaPlayer mp, int what, int extra) {
+            // LogUtil.i("IMediaPlayer-------" + "extra" + extra + "what :" + what + "mp:" + mp);
+            //LogUtil.e("mCurrentState" + what, new NullPointerException("what" + what));
+            if (what == IMediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
+                //LogUtil.e("mCurrentState" + mCurrentState, new NullPointerException("mCurrentState" + mCurrentState));
+                // 播放器开始渲染
+                mCurrentState = STATE_PLAYING;
+                mController.onPlayStateChanged(mCurrentState);
+                if (mPauseBeforePrepared) {
+                    pause();
+                    mPauseBeforePrepared = false;
+                }
+                if (!mController.isNeedPlay()) {
+                    mMediaPlayer.pause();
+                }
+                LogUtil.d("onInfo ——> MEDIA_INFO_VIDEO_RENDERING_START：STATE_PLAYING");
+
+            } else if (what == IMediaPlayer.MEDIA_INFO_BUFFERING_START) {
+                // MediaPlayer暂时不播放，以缓冲更多的数据
+                if (mCurrentState == STATE_PAUSED || mCurrentState == STATE_BUFFERING_PAUSED) {
+                    mCurrentState = STATE_BUFFERING_PAUSED;
+                    LogUtil.d("onInfo ——> MEDIA_INFO_BUFFERING_START：STATE_BUFFERING_PAUSED");
+                } else {
+                    mCurrentState = STATE_BUFFERING_PLAYING;
+                    LogUtil.d("onInfo ——> MEDIA_INFO_BUFFERING_START：STATE_BUFFERING_PLAYING");
+                }
+                mController.onPlayStateChanged(mCurrentState);
+            } else if (what == IMediaPlayer.MEDIA_INFO_BUFFERING_END) {
+                // 填充缓冲区后，MediaPlayer恢复播放/暂停
+                if (mCurrentState == STATE_BUFFERING_PLAYING) {
+                    mCurrentState = STATE_PLAYING;
+                    mController.onPlayStateChanged(mCurrentState);
+                    LogUtil.d("onInfo ——> MEDIA_INFO_BUFFERING_END： STATE_PLAYING");
+                }
+                if (mCurrentState == STATE_BUFFERING_PAUSED) {
+                    mCurrentState = STATE_PAUSED;
+                    mController.onPlayStateChanged(mCurrentState);
+                    LogUtil.d("onInfo ——> MEDIA_INFO_BUFFERING_END： STATE_PAUSED");
+                }
+            } else if (what == IMediaPlayer.MEDIA_INFO_VIDEO_ROTATION_CHANGED) {
+                // 视频旋转了extra度，需要恢复
+                if (mTextureView != null) {
+                    mTextureView.setRotation(extra);
+                    LogUtil.d("视频旋转角度：" + extra);
+                }
+            } else if (what == IMediaPlayer.MEDIA_INFO_NOT_SEEKABLE) {
+                LogUtil.d("视频不能seekTo，为直播视频");
+            } else {
+                LogUtil.d("onInfo ——> what：" + what);
+            }
+            return true;
+        }
+    };
+    OnVideoDurationListener onVideoDurationListener;
+    Handler handler = new Handler();
+    VideoCompleListener videoCompleListener;
+    protected IMediaPlayer.OnCompletionListener mOnCompletionListener
+            = new IMediaPlayer.OnCompletionListener() {
+        @Override
+        public void onCompletion(IMediaPlayer mp) {
+            /**
+             * 如果不是循环播放 则重置
+             */
+            if (!mController.isLooping()) {
+                if (mController != null) {
+                    mController.reset();
+                }
+            }
+            //重播i
+            mCurrentState = STATE_PREPARED;
+            mController.onPlayStateChanged(mCurrentState);
+            LogUtil.d("onPrepared ——> STATE_PREPARED");
+            mp.start();
+            /**
+             * 如果不是循环播放 则暂停
+             */
+            if (!mController.isLooping()) {
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        pause();
+                        seekTo(0);
+                    }
+                }, 0);
+                if (videoCompleListener != null) {
+                    videoCompleListener.onVideoComple();
+                }
+            }
+        }
+    };
+    OnWindowChangeListener onWindowChangeListener;
+    private int mPlayerType = TYPE_IJK;
+    private int mCurrentMode = MODE_NORMAL;
+    private AudioManager mAudioManager;
     private int mBufferPercentage;
+    protected IMediaPlayer.OnBufferingUpdateListener mOnBufferingUpdateListener
+            = new IMediaPlayer.OnBufferingUpdateListener() {
+        @Override
+        public void onBufferingUpdate(IMediaPlayer mp, int percent) {
+            LogUtil.i("OnBufferingUpdateListener======" + percent);
+            mBufferPercentage = percent;
+        }
+    };
     private boolean continueFromLastPosition = true;
     private long skipToPosition;
-    protected boolean isInitVideoManager = false;
-
-
-    OnVideoDurationListener onVideoDurationListener;
-
-    /*视频时长回调*/
-    public interface OnVideoDurationListener {
-        void onVideoDuration(Long duration);
-    }
-
-    public void setOnVideoDurationListener(OnVideoDurationListener onVideoDurationListener) {
-        this.onVideoDurationListener = onVideoDurationListener;
-    }
-
 
     public NiceVideoPlayer(Context context) {
         this(context, null);
@@ -143,7 +273,11 @@ public class NiceVideoPlayer extends FrameLayout
         init();
     }
 
-    private void init() {
+    public void setOnVideoDurationListener(OnVideoDurationListener onVideoDurationListener) {
+        this.onVideoDurationListener = onVideoDurationListener;
+    }
+
+    protected void init() {
         mContainer = new FrameLayout(mContext);
         mContainer.setBackgroundColor(Color.BLACK);
         //mContainer.setBackgroundColor(getResources().getColor(R.color.video_bg));
@@ -161,7 +295,6 @@ public class NiceVideoPlayer extends FrameLayout
         start();
     }
 
-
     public void chageUrlUp(String url) {
         mUrl = url;
         if (!isInitMediaPlayer) {
@@ -174,7 +307,6 @@ public class NiceVideoPlayer extends FrameLayout
         setUp(url, null);
     }
 
-
     public void setController(NiceVideoPlayerController controller) {
         mContainer.removeView(mController);
         mController = controller;
@@ -185,7 +317,6 @@ public class NiceVideoPlayer extends FrameLayout
                 ViewGroup.LayoutParams.MATCH_PARENT);
         mContainer.addView(mController, params);
     }
-
 
     public NiceVideoPlayerController getmController() {
         return mController;
@@ -222,7 +353,6 @@ public class NiceVideoPlayer extends FrameLayout
             LogUtil.d("只有IjkPlayer才能设置播放速度");
         }
     }
-
 
     public void start4G() {
         if (mCurrentState == STATE_IDLE) {
@@ -314,6 +444,10 @@ public class NiceVideoPlayer extends FrameLayout
         return mCurrentState;
     }
 
+    public void setmCurrentState(int mCurrentState) {
+        this.mCurrentState = mCurrentState;
+    }
+
     @Override
     public void pause() {
 
@@ -342,13 +476,6 @@ public class NiceVideoPlayer extends FrameLayout
     public void seekTo(long pos) {
         if (mMediaPlayer != null) {
             mMediaPlayer.seekTo(pos);
-        }
-    }
-
-    @Override
-    public void setVolume(int volume) {
-        if (mAudioManager != null) {
-            mAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volume, 0);
         }
     }
 
@@ -414,9 +541,14 @@ public class NiceVideoPlayer extends FrameLayout
 
     @Override
     public int getMaxVolume() {
-        if (mAudioManager != null) {
-            return mAudioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        try {
+            if (mAudioManager != null) {
+                return mAudioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+            }
+        }catch (Exception e){
+
         }
+
         return 0;
     }
 
@@ -428,10 +560,22 @@ public class NiceVideoPlayer extends FrameLayout
         return 0;
     }
 
+    @Override
+    public void setVolume(int volume) {
+        if (mAudioManager != null) {
+            mAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volume, 0);
+        }
+    }
 
     @Override
     public long getDuration() {
-        return mMediaPlayer != null ? mMediaPlayer.getDuration() : 0;
+        try {
+            return mMediaPlayer != null ? mMediaPlayer.getDuration() : 0;
+        }catch (Exception e){
+
+        }
+        return 0;
+
     }
 
     @Override
@@ -501,7 +645,6 @@ public class NiceVideoPlayer extends FrameLayout
         }
     }
 
-
     private void initIJKPlayer() {
         //  mediaPlayer = (ijkLibLoader == null) ? new IjkMediaPlayer() : new IjkMediaPlayer(ijkLibLoader);
         // mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
@@ -548,14 +691,11 @@ public class NiceVideoPlayer extends FrameLayout
         }
     }
 
-    boolean isInitMediaPlayer = false;
-
     protected void openMediaPlayer() {
 
         try {
             // 屏幕常亮
             mContainer.setKeepScreenOn(true);
-            Uri uri = Uri.parse(mUrl);
             // 设置监听
             mMediaPlayer.setOnPreparedListener(mOnPreparedListener);
             mMediaPlayer.setOnVideoSizeChangedListener(mOnVideoSizeChangedListener);
@@ -563,10 +703,8 @@ public class NiceVideoPlayer extends FrameLayout
             mMediaPlayer.setOnErrorListener(mOnErrorListener);
             mMediaPlayer.setOnInfoListener(mOnInfoListener);
             mMediaPlayer.setOnBufferingUpdateListener(mOnBufferingUpdateListener);
-            // 设置dataSource
             LogUtil.i("mUrl   openMediaPlayer--------------" + mUrl);
-            mMediaPlayer.setDataSource(mContext, uri);
-            LogUtil.d("STATE_PREPARING");
+            mMediaPlayer.setDataSource(mUrl);
             if (mSurface == null) {
                 mSurface = new Surface(mSurfaceTexture);
             }
@@ -576,21 +714,13 @@ public class NiceVideoPlayer extends FrameLayout
             mController.onPlayStateChanged(mCurrentState);
             isInitMediaPlayer = true;
 
-        } catch (FileNotFoundException e){
-
-        }catch (IOException e){
-
-        }catch (IllegalArgumentException e) {
-            e.printStackTrace();
+        } catch (FileNotFoundException e) {
+        } catch (IOException e) {
+        } catch (IllegalArgumentException e) {
         } catch (IllegalStateException e) {
-            e.printStackTrace();
         } catch (Exception e) {
-
         }
-
-
     }
-
 
     @Override
     public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
@@ -605,75 +735,6 @@ public class NiceVideoPlayer extends FrameLayout
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
     }
 
-    protected IMediaPlayer.OnPreparedListener mOnPreparedListener
-            = new IMediaPlayer.OnPreparedListener() {
-        @Override
-        public void onPrepared(IMediaPlayer mp) {
-            mCurrentState = STATE_PREPARED;
-            mController.onPlayStateChanged(mCurrentState);
-            LogUtil.d("onPrepared ——> STATE_PREPARED");
-            mp.start();
-
-            // 从上次的保存位置播放
-//            if (continueFromLastPosition) {
-//                long savedPlayPosition = NiceUtil.getSavedPlayPosition(mContext, mUrl);
-//                mp.seekTo(savedPlayPosition);
-//            }
-            // 跳到指定位置播放
-//            if (skipToPosition != 0) {
-//                mp.seekTo(skipToPosition);
-//            }
-        }
-    };
-
-    protected IMediaPlayer.OnVideoSizeChangedListener mOnVideoSizeChangedListener
-            = new IMediaPlayer.OnVideoSizeChangedListener() {
-        @Override
-        public void onVideoSizeChanged(IMediaPlayer mp, int width, int height, int sar_num, int sar_den) {
-
-            LogUtil.d("onVideoSizeChanged ——> width：" + width + "， height：" + height + "sar_num:" + sar_num + "sar_den:" + sar_den);
-            mTextureView.adaptVideoSize(width, height);
-            LogUtil.d("onVideoSizeChanged ——> width：" + width + "， height：" + height);
-        }
-    };
-
-    protected IMediaPlayer.OnCompletionListener mOnCompletionListener
-            = new IMediaPlayer.OnCompletionListener() {
-        @Override
-        public void onCompletion(IMediaPlayer mp) {
-            /**
-             * 如果不是循环播放 则重置
-             */
-            if (!mController.isLooping()) {
-                if (mController != null) {
-                    mController.reset();
-                }
-            }
-            //重播i
-            mCurrentState = STATE_PREPARED;
-            mController.onPlayStateChanged(mCurrentState);
-            LogUtil.d("onPrepared ——> STATE_PREPARED");
-            mp.start();
-            /**
-             * 如果不是循环播放 则暂停
-             */
-            if (!mController.isLooping()) {
-                getHandler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        pause();
-                        seekTo(0);
-                    }
-                }, 0);
-                if (videoCompleListener != null) {
-                    videoCompleListener.onVideoComple();
-                }
-            }
-        }
-    };
-
-    VideoCompleListener videoCompleListener;
-
     public VideoCompleListener getVideoCompleListener() {
         return videoCompleListener;
     }
@@ -681,97 +742,6 @@ public class NiceVideoPlayer extends FrameLayout
     public void setVideoCompleListener(VideoCompleListener videoCompleListener) {
         this.videoCompleListener = videoCompleListener;
     }
-
-    public interface VideoCompleListener {
-        void onVideoComple();
-    }
-
-
-    public void setmCurrentState(int mCurrentState) {
-        this.mCurrentState = mCurrentState;
-    }
-
-
-    protected IMediaPlayer.OnErrorListener mOnErrorListener
-            = new IMediaPlayer.OnErrorListener() {
-        @Override
-        public boolean onError(IMediaPlayer mp, int what, int extra) {
-            // 直播流播放时去调用mediaPlayer.getDuration会导致-38和-2147483648错误，忽略该错误
-            if (what != -38 && what != -2147483648 && extra != -38 && extra != -2147483648) {
-                mMediaPlayer.pause();
-                mCurrentState = STATE_ERROR;
-                mController.onPlayStateChanged(mCurrentState);
-                LogUtil.d("onError ——> STATE_ERROR ———— what：" + what + ", extra: " + extra);
-            }
-            return true;
-        }
-    };
-
-    protected IMediaPlayer.OnInfoListener mOnInfoListener
-            = new IMediaPlayer.OnInfoListener() {
-        @Override
-        public boolean onInfo(IMediaPlayer mp, int what, int extra) {
-            // LogUtil.i("IMediaPlayer-------" + "extra" + extra + "what :" + what + "mp:" + mp);
-            //LogUtil.e("mCurrentState" + what, new NullPointerException("what" + what));
-            if (what == IMediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
-                //LogUtil.e("mCurrentState" + mCurrentState, new NullPointerException("mCurrentState" + mCurrentState));
-                // 播放器开始渲染
-                mCurrentState = STATE_PLAYING;
-                mController.onPlayStateChanged(mCurrentState);
-                if (mPauseBeforePrepared) {
-                    pause();
-                    mPauseBeforePrepared = false;
-                }
-                if (!mController.isNeedPlay()) {
-                    mMediaPlayer.pause();
-                }
-                LogUtil.d("onInfo ——> MEDIA_INFO_VIDEO_RENDERING_START：STATE_PLAYING");
-
-            } else if (what == IMediaPlayer.MEDIA_INFO_BUFFERING_START) {
-                // MediaPlayer暂时不播放，以缓冲更多的数据
-                if (mCurrentState == STATE_PAUSED || mCurrentState == STATE_BUFFERING_PAUSED) {
-                    mCurrentState = STATE_BUFFERING_PAUSED;
-                    LogUtil.d("onInfo ——> MEDIA_INFO_BUFFERING_START：STATE_BUFFERING_PAUSED");
-                } else {
-                    mCurrentState = STATE_BUFFERING_PLAYING;
-                    LogUtil.d("onInfo ——> MEDIA_INFO_BUFFERING_START：STATE_BUFFERING_PLAYING");
-                }
-                mController.onPlayStateChanged(mCurrentState);
-            } else if (what == IMediaPlayer.MEDIA_INFO_BUFFERING_END) {
-                // 填充缓冲区后，MediaPlayer恢复播放/暂停
-                if (mCurrentState == STATE_BUFFERING_PLAYING) {
-                    mCurrentState = STATE_PLAYING;
-                    mController.onPlayStateChanged(mCurrentState);
-                    LogUtil.d("onInfo ——> MEDIA_INFO_BUFFERING_END： STATE_PLAYING");
-                }
-                if (mCurrentState == STATE_BUFFERING_PAUSED) {
-                    mCurrentState = STATE_PAUSED;
-                    mController.onPlayStateChanged(mCurrentState);
-                    LogUtil.d("onInfo ——> MEDIA_INFO_BUFFERING_END： STATE_PAUSED");
-                }
-            } else if (what == IMediaPlayer.MEDIA_INFO_VIDEO_ROTATION_CHANGED) {
-                // 视频旋转了extra度，需要恢复
-                if (mTextureView != null) {
-                    mTextureView.setRotation(extra);
-                    LogUtil.d("视频旋转角度：" + extra);
-                }
-            } else if (what == IMediaPlayer.MEDIA_INFO_NOT_SEEKABLE) {
-                LogUtil.d("视频不能seekTo，为直播视频");
-            } else {
-                LogUtil.d("onInfo ——> what：" + what);
-            }
-            return true;
-        }
-    };
-
-    protected IMediaPlayer.OnBufferingUpdateListener mOnBufferingUpdateListener
-            = new IMediaPlayer.OnBufferingUpdateListener() {
-        @Override
-        public void onBufferingUpdate(IMediaPlayer mp, int percent) {
-            LogUtil.i("OnBufferingUpdateListener======" + percent);
-            mBufferPercentage = percent;
-        }
-    };
 
     /**
      * 全屏，将mContainer(内部包含mTextureView和mController)从当前容器中移除，并添加到android.R.content中.
@@ -837,18 +807,12 @@ public class NiceVideoPlayer extends FrameLayout
         return false;
     }
 
-    OnWindowChangeListener onWindowChangeListener;
-
     public OnWindowChangeListener getOnWindowChangeListener() {
         return onWindowChangeListener;
     }
 
     public void setOnWindowChangeListener(OnWindowChangeListener onWindowChangeListener) {
         this.onWindowChangeListener = onWindowChangeListener;
-    }
-
-    public interface OnWindowChangeListener {
-        void enterFullScreen(boolean isFull);
     }
 
     /**
@@ -944,6 +908,19 @@ public class NiceVideoPlayer extends FrameLayout
             mController.reset();
         }
         Runtime.getRuntime().gc();
+    }
+
+    /*视频时长回调*/
+    public interface OnVideoDurationListener {
+        void onVideoDuration(Long duration);
+    }
+
+    public interface VideoCompleListener {
+        void onVideoComple();
+    }
+
+    public interface OnWindowChangeListener {
+        void enterFullScreen(boolean isFull);
     }
 
 }

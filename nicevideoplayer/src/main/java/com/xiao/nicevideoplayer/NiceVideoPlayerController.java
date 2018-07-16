@@ -108,7 +108,7 @@ public abstract class NiceVideoPlayerController
      *                  <li>{@link NiceVideoPlayer#STATE_COMPLETED}</li>
      *                  </ul>
      */
-    protected abstract void onPlayStateChanged(int playState);
+    public abstract void onPlayStateChanged(int playState);
 
     /**
      * 当播放器的播放模式发生变化，在此方法中更新不同模式下的控制器界面。

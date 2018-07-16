@@ -8,9 +8,9 @@ import android.os.BatteryManager;
 import android.os.CountDownTimer;
 import android.os.Handler;
 import android.support.annotation.DrawableRes;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -18,11 +18,8 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 import static com.xiao.nicevideoplayer.NiceVideoPlayer.STATE_BUFFERING_PAUSED;
 import static com.xiao.nicevideoplayer.NiceVideoPlayer.STATE_BUFFERING_PLAYING;
@@ -37,12 +34,13 @@ import static com.xiao.nicevideoplayer.NiceVideoPlayer.STATE_PREPARING;
  * Created by XiaoJianjun on 2017/6/21.
  * 仿腾讯视频热点列表页播放器控制器.
  */
-public class TxVideoPlayerController
-        extends NiceVideoPlayerController
+public class GLVideoPlayerController
+        extends FrameLayout
         implements View.OnClickListener,
         SeekBar.OnSeekBarChangeListener,
         ChangeClarityDialog.OnClarityChangedListener {
 
+    public ImageView mCenterStart;
     protected TextView mTime;
     protected TextView mPosition;
     protected TextView mDuration;
@@ -54,7 +52,6 @@ public class TxVideoPlayerController
     Handler mHander = new Handler();
     private Context mContext;
     private ImageView mImage;
-    private ImageView mCenterStart;
     private LinearLayout mTop;
     private ImageView mBack;
     private TextView mTitle;
@@ -122,7 +119,7 @@ public class TxVideoPlayerController
     private boolean isOnTrackingState = false;
     private boolean isTracking = false;
 
-    public TxVideoPlayerController(Context context) {
+    public GLVideoPlayerController(Context context) {
         super(context);
         mContext = context;
         init();
@@ -191,8 +188,6 @@ public class TxVideoPlayerController
         mShare.setOnClickListener(this);
         mSeek.setOnSeekBarChangeListener(this);
         this.setOnClickListener(this);
-
-
         //RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) mBottom.getLayoutParams();
         //layoutParams.bottomMargin=10;
 
@@ -210,13 +205,6 @@ public class TxVideoPlayerController
         tvPlayer.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mNiceVideoPlayer.isInitVideoManager()) {
-                    mNiceVideoPlayer.restart();
-                } else {
-                    //重新初始化
-                    mNiceVideoPlayer.setmCurrentState(STATE_IDLE);
-                    mNiceVideoPlayer.start4G();
-                }
             }
         });
     }
@@ -228,38 +216,18 @@ public class TxVideoPlayerController
     public void showVideoLayout() {
         layou_4g.setVisibility(GONE);
         mError.setVisibility(View.GONE);
+        mCenterStart.setVisibility(GONE);
     }
 
     public void status4G() {
-        if (mNiceVideoPlayer != null) {
-            mNiceVideoPlayer.pause();
-            mNiceVideoPlayer.setmCurrentState(STATE_PAUSED);
-        }
         show4GPlayLayout();
     }
 
     public void statusWifi() {
-        if (mNiceVideoPlayer != null) {
-            if (mNiceVideoPlayer.getmCurrentState() == STATE_ERROR) {
-                mNiceVideoPlayer.setmCurrentState(STATE_PAUSED);
-            }
-            //   mNiceVideoPlayer.setmCurrentState(STATE_PAUSED);
-            if (mNiceVideoPlayer.isInitVideoManager()) {
-                mNiceVideoPlayer.restart();
-            } else {
-                //重新初始化播放
-                mNiceVideoPlayer.setmCurrentState(STATE_IDLE);
-                mNiceVideoPlayer.start();
-            }
-        }
         showVideoLayout();
     }
 
     public void statusNoNetWork() {
-        if (mNiceVideoPlayer != null) {
-            mNiceVideoPlayer.pause();
-            mNiceVideoPlayer.setmCurrentState(STATE_ERROR);
-        }
         showNetErrorLayout();
     }
 
@@ -277,34 +245,24 @@ public class TxVideoPlayerController
         mCenterStart.setVisibility(GONE);
     }
 
-    @Override
     public void setTitle(String title) {
         mTitle.setText(title);
     }
 
-    @Override
     public ImageView imageView() {
         return mImage;
     }
 
-    @Override
     public void setImage(@DrawableRes int resId) {
         mImage.setScaleType(ImageView.ScaleType.FIT_XY);
         mImage.setImageResource(resId);
     }
 
-    @Override
     public void setLenght(long length) {
         mLength.setText(NiceUtil.formatTime(length));
     }
 
-    @Override
     public void setNiceVideoPlayer(NiceVideoPlayer niceVideoPlayer) {
-        super.setNiceVideoPlayer(niceVideoPlayer);
-        // 给播放器配置视频链接地址
-        if (clarities != null && clarities.size() > 1) {
-            mNiceVideoPlayer.setUp(clarities.get(defaultClarityIndex).videoUrl, null);
-        }
     }
 
     /**
@@ -326,14 +284,9 @@ public class TxVideoPlayerController
             mClarityDialog = new ChangeClarityDialog(mContext);
             mClarityDialog.setClarityGrade(clarityGrades, defaultClarityIndex);
             mClarityDialog.setOnClarityCheckedListener(this);
-            // 给播放器配置视频链接地址
-            if (mNiceVideoPlayer != null) {
-                mNiceVideoPlayer.setUp(clarities.get(defaultClarityIndex).videoUrl, null);
-            }
         }
     }
 
-    @Override
     public void onPlayStateChanged(int playState) {
         switch (playState) {
             case STATE_IDLE:
@@ -361,7 +314,6 @@ public class TxVideoPlayerController
                         setTopBottomVisible(false);
                     }
                 }, 2000);
-                startUpdateProgressTimer();
                 break;
             case NiceVideoPlayer.STATE_PLAYING:
                 startDismissTopBottomTimer();
@@ -389,14 +341,12 @@ public class TxVideoPlayerController
                 mLoadText.setText("正在缓冲...");
                 break;
             case STATE_ERROR:
-                cancelUpdateProgressTimer();
                 setTopBottomVisible(false);
                 mTop.setVisibility(View.VISIBLE);
                 mError.setVisibility(View.VISIBLE);
                 showNetErrorLayout();
                 break;
             case STATE_COMPLETED:
-                cancelUpdateProgressTimer();
                 setTopBottomVisible(false);
                 mImage.setVisibility(View.VISIBLE);
                 mCompleted.setVisibility(View.GONE);
@@ -406,7 +356,6 @@ public class TxVideoPlayerController
         }
     }
 
-    @Override
     protected void onPlayModeChanged(int playMode) {
         switch (playMode) {
             case NiceVideoPlayer.MODE_NORMAL:
@@ -444,10 +393,8 @@ public class TxVideoPlayerController
         }
     }
 
-    @Override
     protected void reset() {
         topBottomVisible = false;
-        cancelUpdateProgressTimer();
         cancelDismissTopBottomTimer();
         mSeek.setProgress(0);
         mSeek.setSecondaryProgress(0);
@@ -477,73 +424,21 @@ public class TxVideoPlayerController
     @Override
     public void onClick(View v) {
         if (v == mCenterStart) {
-            if (mNiceVideoPlayer.isIdle()) {
-                mNiceVideoPlayer.start();
-            }
+
         } else if (v == mBack) {
-            if (mNiceVideoPlayer.isFullScreen()) {
-                mNiceVideoPlayer.exitFullScreen();
-            } else if (mNiceVideoPlayer.isTinyWindow()) {
-                mNiceVideoPlayer.exitTinyWindow();
-            }
+
         } else if (v == mRestartPause) {
-            if (mNiceVideoPlayer.isPlaying() || mNiceVideoPlayer.isBufferingPlaying()) {
-                mNiceVideoPlayer.pause();
-            } else if (mNiceVideoPlayer.isPaused() || mNiceVideoPlayer.isBufferingPaused()) {
-                mNiceVideoPlayer.restart();
-            }
-            if (mNiceVideoPlayer.getmCurrentState() == STATE_PREPARING || mNiceVideoPlayer.getmCurrentState() == STATE_PREPARED) {
-                mNiceVideoPlayer.pause();
-                mNiceVideoPlayer.setmCurrentState(STATE_PAUSED);
-            }
-            if (mNiceVideoPlayer.getmCurrentState() == STATE_COMPLETED) {
-                mNiceVideoPlayer.restart();
-            }
-        } else if (v == mFullScreen) {
-            if (mNiceVideoPlayer.isNormal() || mNiceVideoPlayer.isTinyWindow()) {
-                mNiceVideoPlayer.enterFullScreen();
-            } else if (mNiceVideoPlayer.isFullScreen()) {
-                mNiceVideoPlayer.exitFullScreen();
-            }
+
         } else if (v == mClarity) {
             setTopBottomVisible(false); // 隐藏top、bottom
             mClarityDialog.show();     // 显示清晰度对话框
         } else if (v == mRetry) {
-            if (mNiceVideoPlayer != null && NetUtils.isConnected(getContext())) {
-                mNiceVideoPlayer.setmCurrentState(STATE_PAUSED);
-                if (mNiceVideoPlayer.isPaused()) {
-                    mNiceVideoPlayer.restart();
-                } else {
-                    mNiceVideoPlayer.start();
-                }
-            }
-            //mNiceVideoPlayer.restart();
+
         } else if (v == mReplay) {
             mRetry.performClick();
         } else if (v == mShare) {
             Toast.makeText(mContext, "分享", Toast.LENGTH_SHORT).show();
         } else if (v == this) {
-//            if (mNiceVideoPlayer.isPlaying()
-//                    || mNiceVideoPlayer.isPaused()
-//                    || mNiceVideoPlayer.isBufferingPlaying()
-//                    || mNiceVideoPlayer.isBufferingPaused()) {
-//                /*|| mNiceVideoPlayer.isInitVideoManager()*/
-//
-//            }
-
-            if (mNiceVideoPlayer.getmCurrentState() == NiceVideoPlayer.STATE_ERROR) {
-                return;
-            }
-            if (mNiceVideoPlayer.getmCurrentState() == NiceVideoPlayer.STATE_IDLE) {
-                return;
-            }
-            if (mNiceVideoPlayer.getmCurrentState() == NiceVideoPlayer.STATE_PREPARING) {
-                return;
-            }
-//            if (mNiceVideoPlayer.getmCurrentState() == NiceVideoPlayer.STATE_PREPARED) {
-//                return;
-//            }
-
             setTopBottomVisible(!topBottomVisible);
         }
     }
@@ -553,10 +448,6 @@ public class TxVideoPlayerController
         // 根据切换后的清晰度索引值，设置对应的视频链接地址，并从当前播放位置接着播放
         Clarity clarity = clarities.get(clarityIndex);
         mClarity.setText(clarity.grade);
-        long currentPosition = mNiceVideoPlayer.getCurrentPosition();
-        mNiceVideoPlayer.releasePlayer();
-        mNiceVideoPlayer.setUp(clarity.videoUrl, null);
-        mNiceVideoPlayer.start(currentPosition);
     }
 
     @Override
@@ -581,9 +472,6 @@ public class TxVideoPlayerController
             topBottomVisible = true;
         }
         if (visible) {
-            if (!mNiceVideoPlayer.isPaused() && !mNiceVideoPlayer.isBufferingPaused()) {
-                startDismissTopBottomTimer();
-            }
         } else {
             cancelDismissTopBottomTimer();
         }
@@ -626,8 +514,6 @@ public class TxVideoPlayerController
     @Override
     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
         if (isTracking) {
-            long position = (long) (mNiceVideoPlayer.getDuration() * seekBar.getProgress() / 100f);
-            mNiceVideoPlayer.seekTo(position);
         }
         LogUtil.i("seekBar==onProgressChanged");
     }
@@ -636,80 +522,18 @@ public class TxVideoPlayerController
     public void onStartTrackingTouch(SeekBar seekBar) {
         LogUtil.i("seekBar==onStartTrackingTouch");
         isTracking = true;
-//        if (mSeek.getProgress()==0){
-//            mSeek.setProgress(0);
-//        }
-//        isOnTrackingState = mNiceVideoPlayer.isPlaying();
-//        mNiceVideoPlayer.pause();
-//        long position = (long) (mNiceVideoPlayer.getDuration() * seekBar.getProgress() / 100f);
-//        mNiceVideoPlayer.seekTo(position);
-//        mPosition.setText(NiceUtil.formatTime(position));
     }
 
     @Override
     public void onStopTrackingTouch(SeekBar seekBar) {
         isTracking = false;
-//        if (mNiceVideoPlayer.isBufferingPaused() || mNiceVideoPlayer.isPaused()) {
-//            mNiceVideoPlayer.restart();
-//        }
-        long position = (long) (mNiceVideoPlayer.getDuration() * seekBar.getProgress() / 100f);
-        mNiceVideoPlayer.seekTo(position);
-        startDismissTopBottomTimer();
-        if (!mNiceVideoPlayer.isPaused()) {
-            mNiceVideoPlayer.restart();
-        }
-//        if (isOnTrackingState) {
-//            mNiceVideoPlayer.restart();
-//            isOnTrackingState = false;
-//        }
-
-
     }
 
 
-    @Override
     protected void updateProgress() {
-        if (mNiceVideoPlayer.getmCurrentState() == STATE_COMPLETED) {
-            Log.e("updateProgress", "mNiceVideoPlayer.getmCurrentState()==STATE_COMPLETED");
-        }
-        long position = mNiceVideoPlayer.getCurrentPosition();
-        long duration = mNiceVideoPlayer.getDuration();
-
-        if (position != 0) {
-            position += 500;
-        }
-        int bufferPercentage = mNiceVideoPlayer.getBufferPercentage();
-        mSeek.setSecondaryProgress(bufferPercentage);
-        int progress = (int) (100f * position / duration);
-
-        // Log.e("updateProgress--",position+"/"+duration);
-
-//        int currentInt = (int) Math.ceil(position * 1.0 / 1000);
-//        int durationInt = (int) Math.ceil((duration / 1000) * 1.0);
-//        if (durationInt != 0) {
-//            progress = currentInt * 100 / durationInt;
-//        } else {
-//            progress = 0;
-//        }
-        //超过最大显示最大
-//        if (position >= duration+500) {
-//            progress = 0;
-//            position=0;
-//        }
-        if (!mNiceVideoPlayer.isPaused()) {
-            //防止跳针
-            mSeek.setProgress(progress);
-        } else {
-            //mSeek.setProgress(progress);
-        }
-        mPosition.setText(NiceUtil.formatTime(position));
-        mDuration.setText(NiceUtil.formatTime(duration));
-        // 更新时间
-        mTime.setText(new SimpleDateFormat("HH:mm", Locale.CHINA).format(new Date()));
 
     }
 
-    @Override
     protected void showChangePosition(long duration, int newPositionProgress) {
         mChangePositon.setVisibility(View.VISIBLE);
         long newPosition = (long) (duration * newPositionProgress / 100f);
@@ -719,29 +543,24 @@ public class TxVideoPlayerController
         mPosition.setText(NiceUtil.formatTime(newPosition));
     }
 
-    @Override
     protected void hideChangePosition() {
         mChangePositon.setVisibility(View.GONE);
     }
 
-    @Override
     protected void showChangeVolume(int newVolumeProgress) {
         mChangeVolume.setVisibility(View.VISIBLE);
         mChangeVolumeProgress.setProgress(newVolumeProgress);
     }
 
-    @Override
     protected void hideChangeVolume() {
         mChangeVolume.setVisibility(View.GONE);
     }
 
-    @Override
     protected void showChangeBrightness(int newBrightnessProgress) {
         mChangeBrightness.setVisibility(View.VISIBLE);
         mChangeBrightnessProgress.setProgress(newBrightnessProgress);
     }
 
-    @Override
     protected void hideChangeBrightness() {
         mChangeBrightness.setVisibility(View.GONE);
     }

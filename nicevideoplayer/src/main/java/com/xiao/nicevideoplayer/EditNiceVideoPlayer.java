@@ -2,7 +2,6 @@ package com.xiao.nicevideoplayer;
 
 import android.content.Context;
 import android.graphics.SurfaceTexture;
-import android.net.Uri;
 import android.util.AttributeSet;
 import android.view.Surface;
 
@@ -12,26 +11,22 @@ public class EditNiceVideoPlayer extends NiceVideoPlayer {
 
     protected long mMaxLenght = 0;
     protected long mCurrentPosition;
+    MediaPlayerOnCompletionListener mediaPlayerOnCompletionListener;
     private long mEndTime = 0;
     private long mStartTime = 0;
     protected IMediaPlayer.OnCompletionListener mOnCompletionListener
             = new IMediaPlayer.OnCompletionListener() {
         @Override
         public void onCompletion(final IMediaPlayer mp) {
-//            mCurrentState = STATE_COMPLETED;
-//            mController.onPlayStateChanged(mCurrentState);
-//            LogUtil.d("onCompletion ——> STATE_COMPLETED");
-//            // 清除屏幕常亮
-//            mContainer.setKeepScreenOn(false);
-
             //重播i
+            if (mediaPlayerOnCompletionListener != null) {
+                mediaPlayerOnCompletionListener.onCompletion();
+            }
             mCurrentState = STATE_PREPARED;
             mController.onPlayStateChanged(mCurrentState);
             LogUtil.d("onPrepared ——> STATE_PREPARED");
             if (mStartTime != 0) {
-                //  mp.seekTo(mEndTime);
                 mp.seekTo(mStartTime);
-                // mp.start();
             }
             mp.start();
         }
@@ -44,6 +39,10 @@ public class EditNiceVideoPlayer extends NiceVideoPlayer {
     public EditNiceVideoPlayer(Context context, AttributeSet attrs) {
         super(context, attrs);
 
+    }
+
+    public void setMediaPlayerOnCompletionListener(MediaPlayerOnCompletionListener mOnCompletionListener) {
+        this.mediaPlayerOnCompletionListener = mOnCompletionListener;
     }
 
     @Override
@@ -67,6 +66,9 @@ public class EditNiceVideoPlayer extends NiceVideoPlayer {
                 @Override
                 public void onProgressChanged(long progress) {
                     if (progress > lenght) {
+                        if (mediaPlayerOnCompletionListener != null) {
+                            mediaPlayerOnCompletionListener.onCompletion();
+                        }
                         mMediaPlayer.seekTo(startTime);
                     }
                 }
@@ -175,13 +177,12 @@ public class EditNiceVideoPlayer extends NiceVideoPlayer {
         // 设置dataSource
         try {
             LogUtil.i("mUrl   openMediaPlayer--------------" + mUrl);
-            mMediaPlayer.setDataSource(mContext.getApplicationContext(), Uri.parse(mUrl), mHeaders);
+            mMediaPlayer.setDataSource(mUrl);
             LogUtil.d("STATE_PREPARING");
         } catch (Exception e) {
             // e.printStackTrace();
             LogUtil.e("打开播放器发生错误", e);
         }
-
         if (mSurface == null) {
             mSurface = new Surface(mSurfaceTexture);
         }
@@ -190,6 +191,10 @@ public class EditNiceVideoPlayer extends NiceVideoPlayer {
         mCurrentState = STATE_PREPARING;
         mController.onPlayStateChanged(mCurrentState);
         isInitMediaPlayer = true;
+    }
+
+    public interface MediaPlayerOnCompletionListener {
+        void onCompletion();
     }
 
 
