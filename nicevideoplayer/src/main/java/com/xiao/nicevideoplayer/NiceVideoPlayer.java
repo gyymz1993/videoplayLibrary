@@ -2,7 +2,6 @@ package com.xiao.nicevideoplayer;
 
 import android.content.Context;
 import android.content.pm.ActivityInfo;
-import android.graphics.Color;
 import android.graphics.SurfaceTexture;
 import android.media.AudioManager;
 import android.os.Bundle;
@@ -110,26 +109,6 @@ public class NiceVideoPlayer extends FrameLayout
     protected String mUrl;
     protected Map<String, String> mHeaders;
     protected boolean isInitVideoManager = false;
-    protected IMediaPlayer.OnPreparedListener mOnPreparedListener
-            = new IMediaPlayer.OnPreparedListener() {
-        @Override
-        public void onPrepared(IMediaPlayer mp) {
-            mCurrentState = STATE_PREPARED;
-            mController.onPlayStateChanged(mCurrentState);
-            LogUtil.d("onPrepared ——> STATE_PREPARED");
-            mp.start();
-
-            // 从上次的保存位置播放
-//            if (continueFromLastPosition) {
-//                long savedPlayPosition = NiceUtil.getSavedPlayPosition(mContext, mUrl);
-//                mp.seekTo(savedPlayPosition);
-//            }
-            // 跳到指定位置播放
-//            if (skipToPosition != 0) {
-//                mp.seekTo(skipToPosition);
-//            }
-        }
-    };
     protected IMediaPlayer.OnVideoSizeChangedListener mOnVideoSizeChangedListener
             = new IMediaPlayer.OnVideoSizeChangedListener() {
         @Override
@@ -212,6 +191,35 @@ public class NiceVideoPlayer extends FrameLayout
     };
     OnVideoDurationListener onVideoDurationListener;
     Handler handler = new Handler();
+    protected IMediaPlayer.OnPreparedListener mOnPreparedListener
+            = new IMediaPlayer.OnPreparedListener() {
+        @Override
+        public void onPrepared(final IMediaPlayer mp) {
+            mCurrentState = STATE_PREPARED;
+            mController.onPlayStateChanged(mCurrentState);
+            LogUtil.d("onPrepared ——> STATE_PREPARED");
+            if (mTextureView != null) {
+                handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        mTextureView.adaptVideoSize(mp.getVideoWidth(), mp.getVideoHeight());
+                    }
+                });
+            }
+            mp.start();
+
+
+            // 从上次的保存位置播放
+//            if (continueFromLastPosition) {
+//                long savedPlayPosition = NiceUtil.getSavedPlayPosition(mContext, mUrl);
+//                mp.seekTo(savedPlayPosition);
+//            }
+            // 跳到指定位置播放
+//            if (skipToPosition != 0) {
+//                mp.seekTo(skipToPosition);
+//            }
+        }
+    };
     VideoCompleListener videoCompleListener;
     protected IMediaPlayer.OnCompletionListener mOnCompletionListener
             = new IMediaPlayer.OnCompletionListener() {
@@ -279,13 +287,13 @@ public class NiceVideoPlayer extends FrameLayout
 
     protected void init() {
         mContainer = new FrameLayout(mContext);
-        mContainer.setBackgroundColor(Color.BLACK);
+        //mContainer.setBackgroundColor(Color.BLACK);
         //mContainer.setBackgroundColor(getResources().getColor(R.color.video_bg));
         //  mContainer.setBackgroundColor(getResources().getColor(R.color.video_bg));
         // android:background="#1f1f27"
         LayoutParams params = new LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT);
+                ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER);
         this.addView(mContainer, params);
     }
 
@@ -314,7 +322,7 @@ public class NiceVideoPlayer extends FrameLayout
         mController.setNiceVideoPlayer(this);
         LayoutParams params = new LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT);
+                ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER);
         mContainer.addView(mController, params);
     }
 
@@ -545,7 +553,7 @@ public class NiceVideoPlayer extends FrameLayout
             if (mAudioManager != null) {
                 return mAudioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
             }
-        }catch (Exception e){
+        } catch (Exception e) {
 
         }
 
@@ -571,7 +579,7 @@ public class NiceVideoPlayer extends FrameLayout
     public long getDuration() {
         try {
             return mMediaPlayer != null ? mMediaPlayer.getDuration() : 0;
-        }catch (Exception e){
+        } catch (Exception e) {
 
         }
         return 0;
@@ -768,7 +776,7 @@ public class NiceVideoPlayer extends FrameLayout
         }
         LayoutParams params = new LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT);
+                ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER);
         contentView.addView(mContainer, params);
         mCurrentMode = MODE_FULL_SCREEN;
         mController.onPlayModeChanged(mCurrentMode);

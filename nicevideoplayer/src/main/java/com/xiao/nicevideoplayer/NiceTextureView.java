@@ -8,13 +8,15 @@ import android.view.TextureView;
  * 重写TextureView，适配视频的宽高和旋转.
  * （参考自节操播放器 https://github.com/lipangit/JieCaoVideoPlayer）
  */
-public class NiceTextureView extends TextureView {
+public class NiceTextureView extends TextureView implements IRenderView {
 
     private int videoHeight;
     private int videoWidth;
+    private MeasureHelper mMeasureHelper;
 
     public NiceTextureView(Context context) {
         super(context);
+        mMeasureHelper = new MeasureHelper(this);
     }
 
     public int getVideoHeight() {
@@ -37,6 +39,7 @@ public class NiceTextureView extends TextureView {
         if (this.videoWidth != videoWidth && this.videoHeight != videoHeight) {
             this.videoWidth = videoWidth;
             this.videoHeight = videoHeight;
+            mMeasureHelper.setVideoSize(videoWidth, videoHeight);
             requestLayout();
         }
     }
@@ -51,9 +54,10 @@ public class NiceTextureView extends TextureView {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-
         float viewRotation = getRotation();
-
+       //  mMeasureHelper.doMeasure(widthMeasureSpec, heightMeasureSpec);
+        // setMeasuredDimension(mMeasureHelper.getMeasuredWidth(), mMeasureHelper.getMeasuredHeight());
+//
         // 如果判断成立，则说明显示的TextureView和本身的位置是有90度的旋转的，所以需要交换宽高参数。
         if (viewRotation == 90f || viewRotation == 270f) {
             int tempMeasureSpec = widthMeasureSpec;
@@ -75,11 +79,18 @@ public class NiceTextureView extends TextureView {
                 width = widthSpecSize;
                 height = heightSpecSize;
                 // for compatibility, we adjust size based on aspect ratio
-                if (videoWidth * height < width * videoHeight) {
+//                if (videoWidth * height < width * videoHeight) {
+//                    width = height * videoWidth / videoHeight;
+//                } else if (videoWidth * height > width * videoHeight) {
+//                    height = width * videoHeight / videoWidth;
+//                }
+                if (videoWidth > videoHeight) {
+                    width = NiceUtil.getScreenWidth(getContext());
+                }else if (videoWidth < videoHeight){
                     width = height * videoWidth / videoHeight;
-                } else if (videoWidth * height > width * videoHeight) {
+                }else if (videoWidth * height > width * videoHeight) {
                     height = width * videoHeight / videoWidth;
-                }
+               }
             } else if (widthSpecMode == MeasureSpec.EXACTLY) {
                 // only the width is fixed, adjust the height to match aspect ratio if possible
                 width = widthSpecSize;

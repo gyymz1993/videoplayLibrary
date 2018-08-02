@@ -1,7 +1,6 @@
 package com.xiao.nicevideoplayer;
 
 import android.content.Context;
-import android.graphics.Color;
 import android.graphics.SurfaceTexture;
 import android.media.AudioManager;
 import android.media.MediaMetadataRetriever;
@@ -130,7 +129,6 @@ public class OneTouchNiceVideoPlayer extends NiceVideoPlayer {
         LayoutParams params = new LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT);
-        mContainer.setBackgroundColor(Color.RED);
         mContainer.addView(mController, params);
     }
 
